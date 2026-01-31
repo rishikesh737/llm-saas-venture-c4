@@ -1,104 +1,188 @@
 import streamlit as st
 import requests
 import json
-import time
+import os
+import pandas as pd
+from datetime import datetime
 
-# ---- Configuration & Sidebar ----
-st.set_page_config(page_title="LLM Governance Interface", page_icon="🛡️")
+# ---- Page Config ----
+st.set_page_config(page_title="Secure LLM Gateway", page_icon="🛡️", layout="wide")
 
-st.sidebar.header("🔌 Connection Settings")
-api_url = st.sidebar.text_input(
-    "API URL",
-    value="http://localhost:8000/v1/chat/completions",
-    help="Point this to localhost for local dev, or your OpenShift Route for cloud.",
-)
-api_key = st.sidebar.text_input("API Key", value="dev-key-1", type="password")
-model_name = st.sidebar.text_input("Model Name", value="mistral:7b-instruct-q4_K_M")
+st.title("🛡️ Secure LLM Gateway")
 
-st.sidebar.divider()
-st.sidebar.markdown("**Governance Audit**")
-st.sidebar.info(
-    "This interface logs raw latency and JSON payloads for safety evaluation."
-)
+# ==========================================
+# 🧠 SIDEBAR: NAVIGATION & SETTINGS
+# ==========================================
+with st.sidebar:
+    st.header("📍 Navigation")
+    page = st.radio("Go to:", ["Chat Interface", "Governance Audit Logs"])
 
-# ---- Session State ----
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.divider()
 
-# ---- UI Layout ----
-st.title("🛡️ Secure LLM Gateway Client")
-st.caption(f"Connected to: `{api_url}`")
+    st.header("⚙️ Connection Settings")
+    # Defaults
+    default_url = os.getenv("API_URL", "http://127.0.0.1:8000")
+    default_key = os.getenv("API_KEY", "dev-key-1")
 
-# Display History
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        # If there is debug info attached to this message, show it
-        if "debug" in msg:
-            with st.expander("🔍 Governance Data (Latency & Raw JSON)"):
-                st.json(msg["debug"])
+    api_url = st.text_input(
+        "API Base URL",
+        value=default_url,
+        help="Root URL of the API (No trailing slash)",
+    )
+    api_key = st.text_input("API Key", value=default_key, type="password")
+    model_name = st.text_input(
+        "Model Name",
+        value="mistral:7b-instruct-q4_K_M",
+        help="Use 'tinyllama' for Cloud Sandbox",
+    )
 
-# Chat Input
-if prompt := st.chat_input("Enter your prompt..."):
-    # 1. Add User Message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# ---- Global Headers ----
+HEADERS = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    # 2. Call API
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        message_placeholder.markdown("⏳ *Thinking...*")
+# ==========================================
+# PAGE 1: CHAT INTERFACE
+# ==========================================
+if page == "Chat Interface":
+    st.subheader("💬 Enterprise Chat")
 
-        start_time = time.time()
+    # Connection Status Check
+    try:
+        health = requests.get(f"{api_url}/health/live", timeout=2)
+        if health.status_code == 200:
+            st.success(f"Connected to: `{api_url}`")
+        else:
+            st.error(f"Backend Unhealthy: {health.status_code}")
+    except Exception:
+        st.error(f"❌ Connection Error: Cannot reach `{api_url}`")
+        st.stop()
 
-        try:
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": model_name,
-                "messages": [
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages
-                ],
-            }
+    # Session State
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-            response = requests.post(
-                api_url, json=payload, headers=headers, timeout=120
-            )
-            latency = round(time.time() - start_time, 3)
+    # Display History
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-            if response.status_code == 200:
-                data = response.json()
-                content = data["choices"][0]["message"]["content"]
+    # Chat Input
+    if prompt := st.chat_input("Enter your prompt (e.g., 'What is zero trust?')"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-                # Show Response
-                message_placeholder.markdown(content)
+        with st.chat_message("assistant"):
+            with st.spinner(f"Thinking ({model_name})..."):
+                try:
+                    payload = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": prompt}],
+                    }
+                    response = requests.post(
+                        f"{api_url}/v1/chat/completions", json=payload, headers=HEADERS
+                    )
 
-                # Show Governance Data
-                debug_info = {
-                    "latency_seconds": latency,
-                    "status": response.status_code,
-                    "raw_response": data,
-                }
-                with st.expander("🔍 Governance Data (Latency & Raw JSON)"):
-                    st.json(debug_info)
+                    if response.status_code == 200:
+                        data = response.json()
+                        content = data["choices"][0]["message"]["content"]
+                        st.markdown(content)
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": content}
+                        )
 
-                # Save to History
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": content, "debug": debug_info}
+                        with st.expander("🔍 Governance Data (Trace & Latency)"):
+                            # Display usage if available
+                            usage = data.get("usage", {})
+                            st.json(
+                                {
+                                    "trace_id": data.get("id"),
+                                    "latency_ms": "Saved to DB",
+                                    "model": data.get("model"),
+                                    "usage": usage,
+                                    "raw_response": data,
+                                }
+                            )
+                    else:
+                        st.error(f"❌ Error {response.status_code}: {response.text}")
+
+                except Exception as e:
+                    st.error(f"Connection Failed: {str(e)}")
+
+# ==========================================
+# PAGE 2: AUDIT LOGS
+# ==========================================
+elif page == "Governance Audit Logs":
+    st.subheader("📋 Immutable Audit Trail")
+    st.info(f"Fetching logs from: `{api_url}`")
+
+    if st.button("Refresh Logs"):
+        st.rerun()
+
+    try:
+        response = requests.get(f"{api_url}/v1/audit/logs?limit=50", headers=HEADERS)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            if len(data) > 0:
+                df = pd.DataFrame(data)
+                df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+
+                # Check for token columns (graceful fallback if old data exists)
+                if "total_tokens" not in df.columns:
+                    df["total_tokens"] = 0
+                    df["prompt_tokens"] = 0
+                    df["completion_tokens"] = 0
+
+                # Reorder columns to show Token Usage
+                df = df[
+                    [
+                        "timestamp",
+                        "model",
+                        "status_code",
+                        "latency_ms",
+                        "total_tokens",  # <--- New
+                        "prompt_tokens",  # <--- New
+                        "completion_tokens",  # <--- New
+                        "user_hash",
+                        "request_id",
+                    ]
+                ]
+
+                def highlight_status(val):
+                    color = "green" if val == 200 else "red"
+                    return f"color: {color}"
+
+                st.dataframe(
+                    df.style.map(highlight_status, subset=["status_code"]),
+                    use_container_width=True,
                 )
+
+                # Metrics
+                if not df.empty:
+                    # 1. Reliability
+                    error_count = len(df[df["status_code"] != 200])
+                    error_rate = (error_count / len(df)) * 100
+
+                    # 2. Performance
+                    avg_latency = df[df["status_code"] == 200]["latency_ms"].mean()
+
+                    # 3. Volume (Cost Driver)
+                    total_vol = df["total_tokens"].sum()
+
+                    # 4. Estimated Cost ($0.20 per 1M tokens - example rate)
+                    est_cost = (total_vol / 1_000_000) * 0.20
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Total Requests", len(df))
+                    col2.metric("Avg Latency", f"{avg_latency:.0f} ms")
+                    col3.metric("Total Tokens", f"{total_vol:,}")
+                    col4.metric("Est. Cost", f"${est_cost:.6f}")
 
             else:
-                message_placeholder.error(
-                    f"❌ Error {response.status_code}: {response.text}"
-                )
+                st.warning("No logs found.")
+        else:
+            st.error(f"Failed to fetch logs: {response.text}")
 
-        except requests.exceptions.ConnectionError:
-            message_placeholder.error("❌ Connection Error: Is the backend running?")
-        except requests.exceptions.Timeout:
-            message_placeholder.error("❌ Timeout: The model took too long to reply.")
-        except Exception as e:
-            message_placeholder.error(f"❌ Unexpected Error: {e}")
+    except Exception as e:
+        st.error(f"Connection Error: {str(e)}")
