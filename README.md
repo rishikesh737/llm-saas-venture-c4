@@ -1,114 +1,189 @@
-# LLM SaaS Venture
+<p align="center">
+  <h1 align="center">🛡️ Sabhya AI</h1>
+  <p align="center"><strong>Enterprise-Grade, Self-Hosted LLM Governance Gateway</strong></p>
+</p>
 
-A secure, scalable, and auditable Large Language Model (LLM) platform designed for enterprise environments. This project provides a chat interface backed by a hardened API gateway and a local inference engine.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-v0.3.0-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Privacy-First-green?style=flat-square" alt="Privacy First">
+  <img src="https://img.shields.io/badge/Dockerized-Ready-purple?style=flat-square" alt="Dockerized">
+</p>
 
-## 1. Architecture
+---
 
-The system follows a three-tier microservices architecture:
+## Executive Summary
 
-1.  **Frontend (UI):** A **Streamlit** application that provides a user-friendly chat interface. It communicates exclusively with the Backend API.
-2.  **Backend (API Gateway):** A **FastAPI** service that acts as the secure entry point. It handles authentication, rate limiting, request validation, and structured logging before forwarding requests to the inference engine.
-3.  **Inference Engine:** **Ollama** running locally within the cluster (or pod). It hosts and executes the LLM models (e.g., Mistral, TinyLlama) to generate responses.
+**Sabhya AI is not a chatbot.** It is a **Governed Control Plane** designed for enterprises adopting AI responsibly.
 
-**Flow:** `User` -> `Streamlit UI` -> `FastAPI Gateway` -> `Ollama`
+Built for security-conscious organizations, Sabhya provides:
+- **Real-time guardrails** that detect sensitive data before it reaches the model
+- **Immutable audit trails** for every inference request
+- **Rate limiting** to protect infrastructure from abuse
+- **Dynamic model routing** for cost/performance optimization
 
-## 2. Security Features
+### The UI Constitution
+The interface follows a strict **"Security Operations Center"** aesthetic:
+- ❌ No chat bubbles or playful animations
+- ❌ No gradients or "thinking" spinners
+- ✅ Clinical, industrial design language
+- ✅ Static status banners: `[PROCESSING]` → `[COMPLETED]`
 
-This project prioritizes security and is designed to run in strict environments like OpenShift.
+---
 
-*   **Hardened Containers:**
-    *   **Non-Root User:** The API runs as a non-privileged user (UID 10001) to mitigate potential container breakout attacks.
-    *   **Minimal Base Image:** Built on `python:3.12-slim` to reduce the attack surface.
-*   **Read-Only Filesystem:**
-    *   The container's root filesystem is mounted as **Read-Only**.
-    *   Writeable areas are strictly limited to explicit `tmpfs` mounts (e.g., `/tmp`) for necessary temporary files, ensuring no persistent malware can hide in the container image at runtime.
-*   **Privilege Dropping:**
-    *   All Linux capabilities are dropped (`drop: ["ALL"]`), preventing the process from performing privileged system operations.
-    *   `allowPrivilegeEscalation: false` prevents the process from gaining new privileges.
+## Key Features (v0.3.0)
 
-## 3. How to Run Locally (Podman)
+| Feature | Description |
+|---------|-------------|
+| 🛡️ **Governance Engine** | Real-time PII detection (Email, Phone, Credit Card) via Regex. Rate limiting at 50 req/min per IP. |
+| 🧠 **Dynamic Routing** | Switch between models at runtime: `Mistral 7B (Fast)` or `Llama 3 (Smart)`. |
+| 📜 **Immutable Audit Trail** | PostgreSQL-backed logging of every request, response, token count, and PII flag. |
+| ⚡ **RAG Pipeline** | Secure PDF ingestion via ChromaDB. Context injected automatically into prompts. |
+| 🔐 **API Key Authentication** | Bearer token auth with SHA-256 hashed user tracking (privacy-preserving). |
 
-You can run the entire stack locally using Podman.
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SABHYA AI STACK                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Frontend          │  Next.js 14 (App Router) + Tailwind CSS   │
+│                    │  SOC Theme, Constitutional UI              │
+├────────────────────┼────────────────────────────────────────────┤
+│  Backend           │  FastAPI + SlowAPI (Rate Limiting)         │
+│                    │  Pydantic Models, Structlog                │
+├────────────────────┼────────────────────────────────────────────┤
+│  Inference         │  Ollama (Mistral 7B / Llama 3)            │
+├────────────────────┼────────────────────────────────────────────┤
+│  Vector Store      │  ChromaDB (RAG Context)                   │
+├────────────────────┼────────────────────────────────────────────┤
+│  Database          │  PostgreSQL 15 (Audit Logs)               │
+├────────────────────┼────────────────────────────────────────────┤
+│  Container Runtime │  Podman / Docker                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
 
 ### Prerequisites
-*   Podman
-*   Python 3.12 (for local development, optional)
+- **Podman** or **Docker** (with Compose)
+- **Node.js 18+** (for frontend development)
+- **Ollama** with `mistral:7b-instruct-q4_K_M` pulled
 
-### Steps
+### Installation
 
-1.  **Build the Backend Image:**
-    ```bash
-    cd backend/llm-api
-    podman build -t localhost/llm-api:chat .
-    ```
+```bash
+# Clone the repository
+git clone https://github.com/rishikesh737/llm-saas-venture-c4.git
+cd llm-saas-venture-c4
 
-2.  **Create a Pod:**
-    Create a pod to share the network namespace between containers (allowing them to talk via `localhost`).
-    ```bash
-    podman pod create --name llm-pod -p 8000:8000 -p 8501:8501
-    ```
-
-3.  **Run Ollama (Inference):**
-    ```bash
-    podman run -d --pod llm-pod --name ollama \
-      -v ollama_data:/root/.ollama \
-      docker.io/ollama/ollama:latest
-    ```
-    *Note: You may need to pull a model first: `podman exec -it ollama ollama pull mistral:7b-instruct-q4_K_M`*
-
-4.  **Run the Backend API:**
-    ```bash
-    podman run -d --pod llm-pod --name llm-api \
-      --read-only \
-      --tmpfs /tmp \
-      --env OLLAMA_HOST=localhost \
-      --env API_KEYS=secret-key \
-      localhost/llm-api:chat
-    ```
-
-5.  **Run the Frontend:**
-    ```bash
-    cd frontend
-    pip install -r requirements.txt
-    streamlit run app.py
-    ```
-
-## 4. How to Run on OpenShift
-
-The project includes Kubernetes/OpenShift manifests in the `infra/k8s/` directory.
-
-1.  **Create a Project (Namespace):**
-    ```bash
-    oc new-project llm-venture
-    ```
-
-2.  **Apply Configuration & Secrets:**
-    *   Copy `infra/k8s/secrets.example.yaml` to `infra/k8s/secrets.yaml` and add your actual API keys.
-    ```bash
-    oc apply -f infra/k8s/secrets.yaml
-    oc apply -f infra/k8s/pvc.yaml
-    oc apply -f infra/k8s/ollama-init.yaml
-    ```
-
-3.  **Deploy the Stack:**
-    ```bash
-    oc apply -f infra/k8s/llm-stack.yaml
-    ```
-
-This will deploy a Pod containing both the API and Ollama, utilizing shared storage for models and a read-only filesystem configuration for security.
-
-## 5. Governance & Auditability
-
-To satisfy enterprise compliance and audit requirements, the system enforces strict logging standards:
-
-*   **Raw JSON Logs:** The Backend API uses `structlog` to emit all logs in a structured JSON format.
-*   **Audit Trail:** Every interaction is logged with high-fidelity details, including:
-    *   Timestamp (ISO format)
-    *   User Hash (Anonymized identity)
-    *   Model Requested
-    *   Response Time / Duration
-    *   Error Details (if any)
-
-**Why JSON?**
-JSON logs are machine-readable, making them instantly ingestible by SIEM (Security Information and Event Management) tools like Splunk, Datadog, or ELK Stack. This allows security teams to query, visualize, and alert on usage patterns or anomalies without complex parsing rules.
+# Start the full stack
+./start-sabhya.sh
 ```
+
+### Access Points
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Frontend | `http://localhost:3000` | — |
+| Backend API | `http://localhost:8000` | `Bearer dev-key-1` |
+| API Docs | `http://localhost:8000/docs` | — |
+
+### Test the API
+
+```bash
+# Health check
+curl http://localhost:8000/health/live
+
+# Chat completion (with PII detection)
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer dev-key-1" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "mistral:7b-instruct-q4_K_M", "messages": [{"role": "user", "content": "Hello, world!"}]}'
+```
+
+---
+
+## Project Structure
+
+```
+sabhya-ai/
+├── backend/
+│   └── llm-api/
+│       ├── app/
+│       │   ├── main.py           # FastAPI routes, rate limiting, PII detection
+│       │   ├── models.py         # SQLAlchemy ORM (AuditLog schema)
+│       │   ├── database.py       # PostgreSQL connection
+│       │   └── services/
+│       │       └── rag.py        # ChromaDB RAG pipeline
+│       ├── requirements.txt
+│       └── Dockerfile
+├── frontend/
+│   ├── app/
+│   │   └── (protected)/
+│   │       └── page.tsx          # Constitutional UI (Interaction Panel)
+│   ├── components/
+│   └── package.json
+├── .gitignore
+├── start-sabhya.sh               # One-command stack launcher
+└── README.md
+```
+
+### Data Directories (Not Committed)
+| Directory | Purpose |
+|-----------|---------|
+| `pg_data/` | PostgreSQL persistent storage |
+| `chroma_data/` | ChromaDB vector embeddings |
+| `ollama_data/` | Ollama model weights |
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_KEYS` | `dev-key-1` | Comma-separated valid API keys |
+| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama inference endpoint |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins (set for production) |
+
+---
+
+## Governance Features
+
+### PII Detection (Passive Mode)
+Scans all incoming prompts for:
+- 📧 Email addresses
+- 📱 Phone numbers
+- 💳 Credit card patterns
+
+Flagged requests are logged with `pii_detected=true` in the audit trail.
+
+### Rate Limiting
+- **Limit:** 50 requests per minute per IP
+- **Proxy-aware:** Respects `X-Forwarded-For` headers for AWS/load balancers
+- **Response:** HTTP 429 when exceeded
+
+### Audit Logging
+Every request is logged to PostgreSQL with:
+- Request ID, Timestamp, User Hash
+- Model used, Endpoint called
+- Token counts (prompt + completion)
+- PII detection flag, Status code, Latency
+
+---
+
+## License
+
+MIT License — See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <sub>Built with 🛡️ by the Sabhya AI Team</sub>
+</p>
