@@ -7,7 +7,18 @@ FRONTEND_DIR="/mnt/fedora-partition/llm-saas-venture/frontend"
 
 # 2. Start Containers (The new "Sabhya" names)
 # We use 'podman start' to resume the existing containers we just created
-podman start sabhya-db ollama llm-api
+# 2. Start Containers
+# Resume DB and Ollama
+podman start sabhya-db ollama
+
+# Always run API with explicit config to ensure latest image and env vars are used
+echo "🚀 Launching API Container..."
+podman run -d --name llm-api --network host --replace \
+  -e OLLAMA_BASE_URL=http://localhost:11434 \
+  -e API_KEYS=dev-key-1 \
+  -e DATABASE_URL=postgresql://sabhya:***REMOVED***@localhost:5432/sabhya_db \
+  -e "CORS_ORIGINS=*" \
+  localhost/llm-api:stable
 
 # 3. Check for errors
 if [ $? -ne 0 ]; then

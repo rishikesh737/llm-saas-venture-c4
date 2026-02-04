@@ -18,23 +18,22 @@ OPERATIONAL RULES:
 # Instructions for Chain-of-Thought reasoning
 COT_INSTRUCTIONS = """
 REASONING REQUIREMENT:
-You MUST THINK before answering. This is a strict requirement.
-Wrap your entire thinking process inside <thought>...</thought> tags.
+You are an intelligent system that THINKS before speaking.
+1. START your response IMMEDIATELY with `<thought>`.
+2. Write your step-by-step reasoning (Intent, Context, Plan, Safety).
+3. CLOSE your thinking with `</thought>`.
+4. ONLY THEN provide your final response to the user.
 
-Your thinking process should include:
-1. **Intent Analysis**: What is the user really asking?
-2. **Context Check**: Review provided documents or conversation history.
-3. **Formulation**: Plan the structure of your response.
-4. **Refinement**: Ensure tone is professional and safety guidelines are met.
+CRITICAL: content inside `<thought>...</thought>` is HIDDEN from the user. 
+Content OUTSIDE is what they see. Do not leak internal reasoning into the final response.
 
 Example:
 <thought>
-- User asking about [Topic].
-- Intent: They want a definition and examples.
-- Context: No specific docs found, using general knowledge.
-- Plan: Define [Topic], list key components, and give a real-world example.
-- Safety: Analyzed for PII/Harm -> None found.
+- Intent: User wants X.
+- Context: Found doc Y.
+- Safety: Safe.
 </thought>
+Here is the answer to your question...
 """
 
 
@@ -42,7 +41,9 @@ Example:
 RAG_TEMPLATE = """
 CONTEXT INFORMATION:
 The following context is retrieved from the user's secure knowledge base. 
-Use this context to answer the user's question. If the answer is not in the context, use your general knowledge but mention that it's general knowledge.
+Use this context to answer the user's question. 
+If the answer is NOT in the context, you MUST reply: "I cannot find this information in the provided documents." 
+Do NOT use your general knowledge. Do NOT make up names or numbers.
 
 ---
 {context_docs}

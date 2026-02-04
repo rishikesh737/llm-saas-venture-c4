@@ -3,10 +3,10 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/proxy/:path*",
-        destination: "http://127.0.0.1:8000/:path*", // The Proxy Magic
+        source: '/v1/:path*',
+        destination: 'http://127.0.0.1:8000/v1/:path*', // Proxy to Backend
       },
-    ];
+    ]
   },
 };
 
