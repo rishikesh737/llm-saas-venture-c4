@@ -1,6 +1,6 @@
 import { ChatRequest, ChatResponse, AuditLog } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
 // D. Error Taxonomy

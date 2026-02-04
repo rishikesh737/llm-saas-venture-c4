@@ -150,7 +150,7 @@ class LocalRAGService:
             text += page.extract_text() + "\n"
 
         chunk_size = 500
-        chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size - 50)]
+        chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size - 100)]
         
         log.info("processing_pdf", filename=filename, chunks=len(chunks))
 
