@@ -1,184 +1,88 @@
-<p align="center">
-  <h1 align="center">🛡️ Sabhya AI</h1>
-  <p align="center"><strong>Enterprise-Grade, Self-Hosted LLM Governance Gateway</strong></p>
-</p>
+# 🛡️ SĀBHYA AI - Governance Gateway
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v0.3.0-blue?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/Privacy-First-green?style=flat-square" alt="Privacy First">
-  <img src="https://img.shields.io/badge/Dockerized-Ready-purple?style=flat-square" alt="Dockerized">
-</p>
+> **A Secure, Governed AI Platform for Regulated Industries**
+>
+> _Built with Next.js 14, FastAPI, ChromaDB, and Ollama._
 
 ---
 
-## Executive Summary
+## 🚀 Features
 
-**Sabhya AI is not a chatbot.** It is a **Governed Control Plane** designed for enterprises adopting AI responsibly.
-
-Built for security-conscious organizations, Sabhya provides:
-- **Real-time guardrails** that detect sensitive data before it reaches the model
-- **Immutable audit trails** for every inference request
-- **Rate limiting** to protect infrastructure from abuse
-- **Dynamic model routing** for cost/performance optimization
-
-
+- **🧠 Governed Inference**: Real-time PII detection and content safety checks before the LLM sees data.
+- **📚 RAG Pipeline**: Secure document ingestion (PDF) with vector search (ChromaDB).
+- **📝 Immutable Audit Logs**: Blockchain-style SHA-256 hashing for every request/response.
+- **🔐 RBAC Authentication**: JWT-based access control with Admin/User roles.
+- **⚡ Reactive UI**: Modern Next.js dashboard with "Thinking Process" visualization.
 
 ---
 
-## Key Features (v0.3.0)
+## 🏗️ Architecture
 
-| Feature | Description |
-|---------|-------------|
-| 🛡️ **Governance Engine** | Real-time PII detection (Email, Phone, Credit Card) via Regex. Rate limiting at 50 req/min per IP. |
-| 🧠 **Dynamic Routing** | Switch between models at runtime: `Mistral 7B (Fast)` or `Llama 3 (Smart)`. |
-| 📜 **Immutable Audit Trail** | PostgreSQL-backed logging of every request, response, token count, and PII flag. |
-| ⚡ **RAG Pipeline** | Secure PDF ingestion via ChromaDB. Context injected automatically into prompts. |
-| 🔐 **API Key Authentication** | Bearer token auth with SHA-256 hashed user tracking (privacy-preserving). |
+### Data Flow
+`User → Next.js UI → FastAPI Gateway → (Security Layer) → Vector DB / LLM → Audit Log`
 
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SABHYA AI STACK                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Frontend          │  Next.js 14 (App Router) + Tailwind CSS   │
-│                    │  SOC Theme, Constitutional UI              │
-├────────────────────┼────────────────────────────────────────────┤
-│  Backend           │  FastAPI + SlowAPI (Rate Limiting)         │
-│                    │  Pydantic Models, Structlog                │
-├────────────────────┼────────────────────────────────────────────┤
-│  Inference         │  Ollama (Mistral 7B / Llama 3)            │
-├────────────────────┼────────────────────────────────────────────┤
-│  Vector Store      │  ChromaDB (RAG Context)                   │
-├────────────────────┼────────────────────────────────────────────┤
-│  Database          │  PostgreSQL 15 (Audit Logs)               │
-├────────────────────┼────────────────────────────────────────────┤
-│  Container Runtime │  Podman / Docker                          │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Tech Stack
+| Component | Technology | Role |
+|-----------|------------|------|
+| **Frontend** | Next.js 14, TypeScript, Tailwind | Dashboard & Chat UI |
+| **Backend** | FastAPI, Python 3.11 | API Gateway, Logic |
+| **AI Engine** | Ollama (Mistral 7B) | Local Inference |
+| **Memory** | ChromaDB | Vector Search (RAG) |
+| **Database** | PostgreSQL 15 | Immutable Logs |
+| **Security** | Presidio, Microsoft NLP | PII Detection |
 
 ---
 
-## Quick Start
+## 🛠️ Quick Start
 
 ### Prerequisites
-- **Podman** or **Docker** (with Compose)
-- **Node.js 18+** (for frontend development)
-- **Ollama** with `mistral:7b-instruct-q4_K_M` pulled
+- Docker & Docker Compose
+- Node.js 18+ (for local frontend dev)
 
-### Installation
+### 1. Start the Stack
+We provide a single script to orchestrate the entire container stack.
 
 ```bash
-# Clone the repository
-git clone https://github.com/rishikesh737/llm-saas-venture-c4.git
-cd llm-saas-venture-c4
-
-# Start the full stack
+chmod +x start-sabhya.sh
 ./start-sabhya.sh
 ```
 
-### Access Points
+This will:
+1. Build the Backend & Frontend images.
+2. Start PostgreSQL, ChromaDB, and Ollama.
+3. Launch the API (Port 8000) and UI (Port 3000).
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Frontend | `http://localhost:3000` | — |
-| Backend API | `http://localhost:8000` | `Bearer dev-key-1` |
-| API Docs | `http://localhost:8000/docs` | — |
-
-### Test the API
-
-```bash
-# Health check
-curl http://localhost:8000/health/live
-
-# Chat completion (with PII detection)
-curl -X POST http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer dev-key-1" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "mistral:7b-instruct-q4_K_M", "messages": [{"role": "user", "content": "Hello, world!"}]}'
-```
+### 2. Access the Dashboard
+Open **[http://localhost:3000](http://localhost:3000)**
+- **Login**: `***REMOVED***`
+- **Password**: `***REMOVED***`
 
 ---
 
-## Project Structure
+## 📁 Directory Structure
 
 ```
-sabhya-ai/
+llm-saas-venture/
 ├── backend/
-│   └── llm-api/
-│       ├── app/
-│       │   ├── main.py           # FastAPI routes, rate limiting, PII detection
-│       │   ├── models.py         # SQLAlchemy ORM (AuditLog schema)
-│       │   ├── database.py       # PostgreSQL connection
-│       │   └── services/
-│       │       └── rag.py        # ChromaDB RAG pipeline
-│       ├── requirements.txt
-│       └── Dockerfile
-├── frontend/
-│   ├── app/
-│   │   └── (protected)/
-│   │       └── page.tsx          # Constitutional UI (Interaction Panel)
-│   ├── components/
-│   └── package.json
-├── .gitignore
-├── start-sabhya.sh               # One-command stack launcher
-└── README.md
+│   └── llm-api/        # FastAPI Application
+│       ├── app/services/   # RAG, Audit, PII Logic
+│       └── app/routes/     # API Endpoints
+├── frontend/           # Next.js Application
+│   ├── components/     # InteractionPanel, GovernanceLogs
+│   └── app/            # Pages & Layouts
+├── infra/              # Kubernetes & Docker Configs
+└── docs/               # System Documentation
 ```
 
-### Data Directories (Not Committed)
-| Directory | Purpose |
-|-----------|---------|
-| `pg_data/` | PostgreSQL persistent storage |
-| `chroma_data/` | ChromaDB vector embeddings |
-| `ollama_data/` | Ollama model weights |
+---
+
+## 🛡️ Security Model
+
+1.  **PII Stripping**: All prompts are scanned for emails, phones, and credit cards. High-risk prompts are blocked.
+2.  **Audit Trail**: Every interaction is logged with a cryptographic signature (`HMAC-SHA256`).
+3.  **Isolation**: The LLM runs in a separate container and never accesses the internet directly.
 
 ---
 
-## Configuration
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_KEYS` | `dev-key-1` | Comma-separated valid API keys |
-| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama inference endpoint |
-| `CORS_ORIGINS` | `*` | Allowed CORS origins (set for production) |
-
----
-
-## Governance Features
-
-### PII Detection (Passive Mode)
-Scans all incoming prompts for:
-- 📧 Email addresses
-- 📱 Phone numbers
-- 💳 Credit card patterns
-
-Flagged requests are logged with `pii_detected=true` in the audit trail.
-
-### Rate Limiting
-- **Limit:** 50 requests per minute per IP
-- **Proxy-aware:** Respects `X-Forwarded-For` headers for AWS/load balancers
-- **Response:** HTTP 429 when exceeded
-
-### Audit Logging
-Every request is logged to PostgreSQL with:
-- Request ID, Timestamp, User Hash
-- Model used, Endpoint called
-- Token counts (prompt + completion)
-- PII detection flag, Status code, Latency
-
----
-
-## License
-
-MIT License — See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <sub>Built with Security In Mind 🛡️ by the Rishikesh Pednekar</sub>
-</p>
+## 📜 License
+MIT License. See [LICENSE](./LICENSE) for details.
