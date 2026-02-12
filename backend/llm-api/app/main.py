@@ -108,11 +108,8 @@ async def chat_completion(request: Request, response: Response, chat_req: ChatRe
         
         if resp.status_code == 200:
             content = resp.json()["message"]["content"]
-            
-            # --- CALCULATE TOKENS (NEW LOGIC) ---
             prompt_tokens = len(str(payload)) // 4
             completion_tokens = len(content) // 4
-            
             return {
                 "id": request_id, 
                 "choices": [{"message": {"role": "assistant", "content": content}}], 
@@ -154,6 +151,8 @@ async def delete_document(filename: str, current_user: UserInfo = Depends(get_cu
         file_path = f"/app/data/{filename}"
         if os.path.exists(file_path):
             os.remove(file_path)
+            # --- NEW: Also delete from ChromaDB ---
+            rag_service.delete_document(filename) 
             return {"status": "deleted", "filename": filename}
         else:
             raise HTTPException(status_code=404, detail="Document not found")
