@@ -56,6 +56,7 @@ ENTITY_RISK_MAPPING = {
     "IBAN_CODE": PIIRiskLevel.HIGH,
     "US_PASSPORT": PIIRiskLevel.HIGH,
     "UK_NHS": PIIRiskLevel.HIGH,
+    "CREDENTIAL": PIIRiskLevel.HIGH,
     # MEDIUM RISK - Contact Information
     "PHONE_NUMBER": PIIRiskLevel.MEDIUM,
     "EMAIL_ADDRESS": PIIRiskLevel.MEDIUM,
@@ -71,6 +72,7 @@ ENTITY_RISK_MAPPING = {
 # Fallback regex patterns (when Presidio is not available)
 REGEX_PATTERNS = {
     "EMAIL_ADDRESS": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+    "CREDENTIAL": r"(?i)(password|passwd|pwd|pass)\s*(is|:|\=)\s*\S+",
     "CREDIT_CARD": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
     "PHONE_NUMBER": r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b",
     "US_SSN": r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b",

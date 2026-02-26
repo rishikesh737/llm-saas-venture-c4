@@ -30,12 +30,23 @@ podman start sabhya-db ollama
 
 echo "🚀 Launching API Container..."
 podman run -d --name llm-api --network host --replace \
+  -e ENVIRONMENT="${ENVIRONMENT:-development}" \
+  -e DEBUG="${DEBUG:-false}" \
   -e OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434}" \
   -e API_KEYS="${API_KEYS:-}" \
   -e DATABASE_URL="${DATABASE_URL}" \
   -e SECRET_KEY="${SECRET_KEY}" \
   -e AUDIT_HMAC_SECRET="${AUDIT_HMAC_SECRET:-}" \
+  -e AUDIT_LOG_RETENTION_DAYS="${AUDIT_LOG_RETENTION_DAYS:-90}" \
   -e "CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}" \
+  -e PII_DETECTION_ENABLED="${PII_DETECTION_ENABLED:-true}" \
+  -e PII_BLOCKING_MODE="${PII_BLOCKING_MODE:-BLOCK_HIGH_RISK}" \
+  -e PII_CONFIDENCE_THRESHOLD="${PII_CONFIDENCE_THRESHOLD:-0.35}" \
+  -e PII_ANONYMIZE_LOGS="${PII_ANONYMIZE_LOGS:-true}" \
+  -e RATE_LIMIT_ENABLED="${RATE_LIMIT_ENABLED:-true}" \
+  -e DEFAULT_RATE_LIMIT_PER_MINUTE="${DEFAULT_RATE_LIMIT_PER_MINUTE:-50}" \
+  -e LOG_LEVEL="${LOG_LEVEL:-INFO}" \
+  -e LOG_FORMAT="${LOG_FORMAT:-json}" \
   localhost/llm-api:stable
 
 # 5. Check for errors
